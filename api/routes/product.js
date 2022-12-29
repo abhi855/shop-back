@@ -16,7 +16,7 @@ router.post("/", verifyTokenAndAdmin, async (req, res) => {
     const savedProduct = await newProduct.save();
     res.status(200).json(savedProduct);
   } catch (err) {
-    res.status(500).json(err);
+    res.status(500).json("NotAbleto create" + err);
   }
 });
 
@@ -66,9 +66,14 @@ router.get("/", async (req, res) => {
     if (qNew) {
       products = await Product.find().sort({ createdAt: -1 }).limit(1);
     } else if (qCategory) {
+      // products = await Product.find({
+      //   categories: {
+      //     $in: [qCategory],
+      //   },
+      // });
       products = await Product.find({
-        categories: {
-          $in: [qCategory],
+        category: {
+          $eq: qCategory,
         },
       });
     } else {

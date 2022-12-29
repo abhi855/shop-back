@@ -8,13 +8,14 @@ import {
 } from "firebase/storage";
 import app from "../../firebase";
 import { addProduct } from "../../redux/apiCalls";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 
 export default function NewProduct() {
   const [inputs, setInputs] = useState({});
   const [file, setFile] = useState(null);
   const [cat, setCat] = useState([]);
   const dispatch = useDispatch();
+  const products = useSelector((state) => state.product);
 
   const handleChange = (e) => {
     setInputs((prev) => {
@@ -27,7 +28,7 @@ export default function NewProduct() {
 
   const handleClick = (e) => {
     e.preventDefault();
-    const fileName = new Date().getTime() + file.name;
+    const fileName = "seeds_" + file.name;
     const storage = getStorage(app);
     const storageRef = ref(storage, fileName);
     const uploadTask = uploadBytesResumable(storageRef, file);
@@ -56,21 +57,27 @@ export default function NewProduct() {
       },
       (error) => {
         // Handle unsuccessful uploads
+        console.log(error);
       },
       () => {
         // Handle successful uploads on complete
         // For instance, get the download URL: https://firebasestorage.googleapis.com/...
-        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+        getDownloadURL(uploadTask.snapshot.ref).then(async (downloadURL) => {
           const product = { ...inputs, img: downloadURL, categories: cat };
-          addProduct(product, dispatch);
+          await addProduct(product, dispatch);
+          // const products = useSelector((state) => state.product.products);
         });
       }
     );
   };
-
+  const demo = () => {
+    console.log(products);
+  };
   return (
     <div className="newProduct">
       <h1 className="addProductTitle">New Product</h1>
+      {products.isFetching && <h3>Uploading</h3>}
+      {products.isError && <h3>Upload Failed</h3>}
       <form className="addProductForm">
         <div className="addProductItem">
           <label>Image</label>
