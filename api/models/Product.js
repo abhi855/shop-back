@@ -12,6 +12,9 @@ const ProductSchema = new mongoose.Schema(
     inStock: { type: Boolean, default: true },
     category: { type: String, default: "seeds" },
     subcategory: { type: String, default: "summer" },
+    img2: {
+      type: String,
+    },
   },
   { timestamps: true }
 );

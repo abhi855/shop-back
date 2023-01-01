@@ -7,18 +7,47 @@ const {
 
 const router = require("express").Router();
 
+const multer = require("multer");
+const fileFilter = (req, file, cb) => {
+  if (
+    file.mimetype === "image/jpeg" ||
+    file.mimetype === "image.jpg" ||
+    file.mimetype === "image/png"
+  )
+    cb(null, true);
+  else cb(null, false);
+};
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "./uploads/");
+  },
+  filename: function (req, file, cb) {
+    cb(null, "seeds" + file.originalname);
+  },
+});
+const upload = multer({
+  storage: storage,
+  fileFilter: fileFilter,
+});
 //CREATE
 
-router.post("/", verifyTokenAndAdmin, async (req, res) => {
-  const newProduct = new Product(req.body);
+router.post(
+  "/",
+  verifyTokenAndAdmin,
+  upload.single("productImage"),
+  async (req, res) => {
+    req.body.img2 = req.file.path;
+    // console.log(req);
+    const newProduct = new Product(req.body);
 
-  try {
-    const savedProduct = await newProduct.save();
-    res.status(200).json(savedProduct);
-  } catch (err) {
-    res.status(500).json("NotAbleto create" + err);
+    try {
+      const savedProduct = await newProduct.save();
+      res.status(200).json(savedProduct);
+    } catch (err) {
+      res.status(500).json("NotAbleto create" + err);
+    }
   }
-});
+);
 
 //UPDATE
 router.put("/:id", verifyTokenAndAdmin, async (req, res) => {
