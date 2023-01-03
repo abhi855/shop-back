@@ -36,7 +36,7 @@ router.post(
   verifyTokenAndAdmin,
   upload.single("productImage"),
   async (req, res) => {
-    req.body.img2 = req.file.path;
+    req.body.img = req.file.path;
     // console.log(req);
     const newProduct = new Product(req.body);
 
@@ -44,7 +44,8 @@ router.post(
       const savedProduct = await newProduct.save();
       res.status(200).json(savedProduct);
     } catch (err) {
-      res.status(500).json("NotAbleto create" + err);
+      console.log(err);
+      res.status(500).json(err);
     }
   }
 );
