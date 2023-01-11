@@ -1,4 +1,8 @@
 const Product = require("../models/Product");
+var sharp = require("sharp");
+const path = require("path");
+const fs = require("fs");
+
 const {
   verifyToken,
   verifyTokenAndAuthorization,
@@ -22,7 +26,7 @@ const storage = multer.diskStorage({
     cb(null, "./uploads/");
   },
   filename: function (req, file, cb) {
-    cb(null, "seeds" + file.originalname);
+    cb(null, "product" + file.originalname);
   },
 });
 const upload = multer({
@@ -37,7 +41,38 @@ router.post(
   verifyTokenAndAdmin,
   upload.single("productImage"),
   async (req, res) => {
-    req.body.img = req.file.path;
+    console.log(req.file);
+    if (req.file) {
+      req.body.img = req.file.path;
+
+      const dir = path.join(__dirname, "..");
+
+      await sharp(dir + `/uploads/${req.file.filename}`)
+        .resize({ width: 275, height: 325, options: { fit: "fill" } })
+        .jpeg({ quality: 100 })
+        .toFile(dir + `/uploads/thumb_${req.file.filename}`)
+        .then(() => {
+          req.body.thumb = `uploads/thumb_${req.file.filename}`;
+        })
+        .catch((err) => {
+          console.log(err);
+          res.status(500).json(err);
+        });
+
+      // Configuring Preview Image
+      await sharp(dir + `/uploads/${req.file.filename}`)
+        .resize(800, 1000, { fit: "fill" })
+        .jpeg({ quality: 100 })
+        .toFile(dir + `/uploads/preview_${req.file.filename}`)
+        .then(() => {
+          req.body.preview = `uploads/preview_${req.file.filename}`;
+        })
+        .catch((err) => {
+          console.log(err);
+          res.status(500).json(err);
+        });
+    }
+
     // console.log(req);
     const newProduct = new Product(req.body);
 
@@ -52,23 +87,83 @@ router.post(
 );
 
 //UPDATE
-router.put("/:id", verifyTokenAndAdmin, async (req, res) => {
-  try {
-    const updatedProduct = await Product.findByIdAndUpdate(
-      req.params.id,
-      {
-        $set: req.body,
-      },
-      { new: true }
-    );
-    res.status(200).json(updatedProduct);
-  } catch (err) {
-    res.status(500).json(err);
+router.put(
+  "/:id",
+  verifyTokenAndAdmin,
+  upload.single("productImage"),
+  async (req, res) => {
+    try {
+      if (req.file) {
+        const f = imageDelete(req, res, () => {});
+        req.body.img = req.file.path;
+
+        const dir = path.join(__dirname, "..");
+
+        await sharp(dir + `/uploads/${req.file.filename}`)
+          .resize({ width: 275, height: 325, options: { fit: "fill" } })
+          .jpeg({ quality: 100 })
+          .toFile(dir + `/uploads/thumb_${req.file.filename}`)
+          .then(() => {
+            req.body.thumb = `uploads/thumb_${req.file.filename}`;
+          })
+          .catch((err) => {
+            console.log(err);
+            res.status(500).json(err);
+          });
+
+        // Configuring Preview Image
+        await sharp(dir + `/uploads/${req.file.filename}`)
+          .resize(800, 1000, { fit: "fill" })
+          .jpeg({ quality: 100 })
+          .toFile(dir + `/uploads/preview_${req.file.filename}`)
+          .then(() => {
+            req.body.preview = `uploads/preview_${req.file.filename}`;
+          })
+          .catch((err) => {
+            console.log(err);
+            res.status(500).json(err);
+          });
+      }
+      console.log(req.body);
+      const updatedProduct = await Product.findByIdAndUpdate(
+        req.params.id,
+        {
+          $set: req.body,
+        },
+        { new: true }
+      );
+      console.log(updatedProduct);
+      res.status(200).json(updatedProduct);
+    } catch (err) {
+      res.status(500).json(err);
+    }
   }
-});
+);
 
 //DELETE
-router.delete("/:id", verifyTokenAndAdmin, async (req, res) => {
+const imageDelete = async (req, res, next) => {
+  const dir = path.join(__dirname, "..");
+  var product;
+  try {
+    product = await Product.findById(req.params.id);
+
+    console.log(product);
+    fs.unlink(dir + "/" + product.img, (err) => {
+      if (err) console.log(err);
+    });
+    fs.unlink(dir + "/" + product.thumb, (err) => {
+      if (err) console.log(err);
+    });
+    fs.unlink(dir + "/" + product.preview, (err) => {
+      if (err) console.log(err);
+    });
+    next();
+  } catch (e) {
+    console.log(e, "Hello");
+    res.status(500).json(e);
+  }
+};
+router.delete("/:id", verifyTokenAndAdmin, imageDelete, async (req, res) => {
   try {
     await Product.findByIdAndDelete(req.params.id);
     res.status(200).json("Product has been deleted...");
